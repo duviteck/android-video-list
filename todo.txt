@@ -1,0 +1,1 @@
+* remove settings button handling in case of non-usage
