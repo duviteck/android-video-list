@@ -8,8 +8,7 @@ import android.view.ViewGroup;
 
 public class VideoListFragment extends Fragment {
 
-    public VideoListFragment() {
-    }
+    public VideoListFragment() {}
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

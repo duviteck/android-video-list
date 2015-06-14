@@ -1,1 +1,4 @@
+http://tangohacks.com/video/list.json
+
 * remove settings button handling in case of non-usage
+* make videos loading in several threads
