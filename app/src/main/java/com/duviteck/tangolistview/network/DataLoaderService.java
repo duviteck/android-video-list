@@ -3,6 +3,7 @@ package com.duviteck.tangolistview.network;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -23,7 +24,10 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT;
+import static android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH;
 import static com.duviteck.tangolistview.provider.VideoContentProvider.VIDEO_LIST_URI;
+import static java.lang.Integer.parseInt;
 
 /**
  * Created by duviteck on 13/06/15.
@@ -111,12 +115,17 @@ public class DataLoaderService extends IntentService {
 
         try {
             // mark current video as loading
-            DatabaseUtils.updateLoadProgress(this, videoUrl, 1, 0);
+            DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADING);
+
             loadVideo(videoUrl);
+
+            storeVideoSize(videoUrl);
+
+            DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADED);
         } catch (IOException e) {
             Log.w(TAG, "can't load video [url]:" + videoUrl);
             // unmark current video as loading
-            DatabaseUtils.updateLoadProgress(this, videoUrl, 0, 0);
+            DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.NOT_LOADING);
             notifyVideoLoadFailed(videoUrl);
         }
     }
@@ -175,12 +184,24 @@ public class DataLoaderService extends IntentService {
         }
     }
 
+    private void storeVideoSize(String url) {
+        Uri videoUri = DataLoaderService.getVideoUri(this, url);
+
+        MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+        metaRetriever.setDataSource(this, videoUri);
+        int width = parseInt(metaRetriever.extractMetadata(METADATA_KEY_VIDEO_WIDTH));
+        int height = parseInt(metaRetriever.extractMetadata(METADATA_KEY_VIDEO_HEIGHT));
+        metaRetriever.release();
+
+        DatabaseUtils.updateVideoSize(this, url, width, height);
+    }
+
     private boolean isVideoAlreadyLoading(String videoUrl) {
-        long videoTotalSize = DatabaseUtils.getVideoTotalSize(this, videoUrl);
-        if (videoTotalSize == -1) {
+        LoadingStatus status = DatabaseUtils.getVideoLoadingStatus(this, videoUrl);
+        if (status == null) {
             throw new IllegalStateException("This situation should never happen");
         }
-        return videoTotalSize > 0;
+        return status != LoadingStatus.NOT_LOADING;
     }
 
     private void notifyVideoListLoad(boolean success) {
@@ -234,5 +255,31 @@ public class DataLoaderService extends IntentService {
         intent.setAction(DataLoaderService.LOAD_VIDEO_ACTION);
         intent.putExtra(DataLoaderService.VIDEO_URL_EXTRA, url);
         startService(intent);
+    }
+
+
+    public enum LoadingStatus {
+        NOT_LOADING(0),
+        LOADING(1),
+        LOADED(2);
+
+        private int value;
+
+        LoadingStatus(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        public static LoadingStatus fromValue(int val) {
+            for (LoadingStatus status : LoadingStatus.values()) {
+                if (status.value == val) {
+                    return status;
+                }
+            }
+            return null;
+        }
     }
 }

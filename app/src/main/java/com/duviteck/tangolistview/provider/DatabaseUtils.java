@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.os.RemoteException;
 
 import com.duviteck.tangolistview.api.response.VideoEntityResponse;
+import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
 import java.util.ArrayList;
@@ -45,6 +46,19 @@ public class DatabaseUtils {
         );
     }
 
+    public static void updateVideoSize(Context context, String url, int width, int height) {
+        ContentValues cv = new ContentValues(2);
+        cv.put(VideoTable.WIDTH, width);
+        cv.put(VideoTable.HEIGHT, height);
+
+        context.getContentResolver().update(
+                VideoContentProvider.UPDATE_VIDEO_URI,
+                cv,
+                VideoTable.URL + " = ?",
+                new String[] {url}
+        );
+    }
+
     public static void insertVideos(Context context, VideoEntityResponse[] videos) {
         ArrayList<ContentProviderOperation> ops = new ArrayList<>(videos.length);
         for (VideoEntityResponse video : videos) {
@@ -53,6 +67,9 @@ public class DatabaseUtils {
                     .withValue(VideoTable.TITLE, video.getTitle())
                     .withValue(VideoTable.TOTAL_SIZE, 0)
                     .withValue(VideoTable.LOADED_SIZE, 0)
+                    .withValue(VideoTable.WIDTH, 0)
+                    .withValue(VideoTable.HEIGHT, 0)
+                    .withValue(VideoTable.LOADING_STATUS, LoadingStatus.NOT_LOADING.getValue())
                     .withValue(VideoTable.SHOULD_BE_SHOWN, 0)
                     .build());
         }
@@ -77,24 +94,36 @@ public class DatabaseUtils {
         );
     }
 
-    public static long getVideoTotalSize(Context context, String url) {
+    public static void updateLoadingStatus(Context context, String url, LoadingStatus status) {
+        ContentValues cv = new ContentValues(1);
+        cv.put(VideoTable.LOADING_STATUS, status.getValue());
+
+        context.getContentResolver().update(
+                VideoContentProvider.UPDATE_VIDEO_URI,
+                cv,
+                VideoTable.URL + " = ?",
+                new String[] {url}
+        );
+    }
+
+    public static LoadingStatus getVideoLoadingStatus(Context context, String url) {
         Cursor cursor = null;
         try {
             cursor = context.getContentResolver().query(
                     VIDEO_LIST_URI,
-                    new String[] {VideoTable.TOTAL_SIZE},
+                    new String[] {VideoTable.LOADING_STATUS},
                     VideoTable.URL + " = ?",
                     new String[] {url},
                     null);
             if (cursor.moveToNext()) {
-                return cursor.getLong(0);
+                return LoadingStatus.fromValue(cursor.getInt(0));
             }
         } finally {
             if (cursor != null) {
                 cursor.close();
             }
         }
-        return -1;
+        return null;
     }
 
     private static String joinEscaped(CharSequence delimiter, Iterable tokens) {

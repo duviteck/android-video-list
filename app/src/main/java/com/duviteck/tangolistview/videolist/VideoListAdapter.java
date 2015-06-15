@@ -2,16 +2,22 @@ package com.duviteck.tangolistview.videolist;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
+import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.CursorAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.duviteck.tangolistview.R;
 import com.duviteck.tangolistview.VideoView;
 import com.duviteck.tangolistview.network.DataLoaderService;
+import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
 /**
@@ -24,6 +30,9 @@ public class VideoListAdapter extends CursorAdapter {
     private int urlIndex;
     private int totalSizeIndex;
     private int loadedSizeIndex;
+    private int widthIndex;
+    private int heightIndex;
+    private int loadingStatusIndex;
 
     public VideoListAdapter(Context context, Cursor c) {
         super(context, c, false);
@@ -35,6 +44,9 @@ public class VideoListAdapter extends CursorAdapter {
         urlIndex = c.getColumnIndexOrThrow(VideoTable.URL);
         totalSizeIndex = c.getColumnIndexOrThrow(VideoTable.TOTAL_SIZE);
         loadedSizeIndex = c.getColumnIndexOrThrow(VideoTable.LOADED_SIZE);
+        widthIndex = c.getColumnIndexOrThrow(VideoTable.WIDTH);
+        heightIndex = c.getColumnIndexOrThrow(VideoTable.HEIGHT);
+        loadingStatusIndex = c.getColumnIndexOrThrow(VideoTable.LOADING_STATUS);
     }
 
     @Override
@@ -79,41 +91,61 @@ public class VideoListAdapter extends CursorAdapter {
         holder.progress.setText(context.getString(R.string.progress_text, progressPercent));
     }
 
-    private void bindVideoView(View view, Context context, Cursor cursor) {
+    private void bindVideoView(final View view, Context context, Cursor cursor) {
         final ViewHolder holder = (ViewHolder) view.getTag();
         holder.loadingContainer.setVisibility(View.GONE);
         holder.videoContainer.setVisibility(View.VISIBLE);
 
         String url = cursor.getString(urlIndex);
-        holder.videoView.setVideoURI(DataLoaderService.getVideoUri(context, url));
-//        holder.videoView.setZOrderOnTop(true);
+        Uri videoUri = DataLoaderService.getVideoUri(context, url);
+        holder.videoView.setVideoURI(videoUri);
 
-//        if (holder.videoView.getWidth() > 0) {
-//            Log.w("VideoListAdapter", "init height");
-//            ViewGroup.LayoutParams lp = holder.videoView.getLayoutParams();
-//            lp.height = holder.videoView.getWidth();
-//            holder.videoView.setLayoutParams(lp);
-//        }
+        final int videoWidth = cursor.getInt(widthIndex);
+        final int videoHeight = cursor.getInt(heightIndex);
+        view.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                ViewGroup.LayoutParams lp = view.getLayoutParams();
+                int width = view.getWidth() != 0 ? view.getWidth() : lp.width;
+                int height = videoHeight * width / videoWidth;
 
+                lp.width = width;
+                lp.height = height;
+                view.setLayoutParams(lp);
+
+                lp = holder.videoView.getLayoutParams();
+                lp.width = width;
+                lp.height = height;
+                holder.videoView.setLayoutParams(lp);
+
+                lp = holder.videoButton.getLayoutParams();
+                lp.width = width;
+                lp.height = height;
+                holder.videoButton.setLayoutParams(lp);
+
+                view.getViewTreeObserver().removeOnPreDrawListener(this);
+                return false;
+            }
+        });
+
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        retriever.setDataSource(context, videoUri);
+        Bitmap bitmap = retriever.getFrameAtTime(0);
+        holder.videoButton.setImageBitmap(bitmap);
+        Log.w(TAG, "bitmap width:" + bitmap.getWidth() + ", height:" + bitmap.getHeight());
 
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.w(TAG, "onCLick");
-                ViewGroup.LayoutParams lp = holder.videoView.getLayoutParams();
-                lp.height = holder.videoView.getWidth();
-                holder.videoView.setLayoutParams(lp);
-
-//                holder.videoView.setZOrderOnTop(true);
+                holder.videoButton.setVisibility(View.GONE);
                 holder.videoView.start();
             }
         });
     }
 
     private boolean isVideoContainer(Cursor cursor) {
-        long totalSize = cursor.getLong(totalSizeIndex);
-        long loadedSize = cursor.getLong(loadedSizeIndex);
-        return (totalSize > 0) && (totalSize == loadedSize);
+        return LoadingStatus.fromValue(cursor.getInt(loadingStatusIndex)) == LoadingStatus.LOADED;
     }
 
     private ViewHolder createHolder(View view) {
@@ -125,7 +157,7 @@ public class VideoListAdapter extends CursorAdapter {
 
         holder.videoContainer = view.findViewById(R.id.video_container);
         holder.videoView = (VideoView) view.findViewById(R.id.video_view);
-        holder.videoButton = view.findViewById(R.id.video_button);
+        holder.videoButton = (ImageView) view.findViewById(R.id.video_button);
 
         return holder;
     }
@@ -138,6 +170,6 @@ public class VideoListAdapter extends CursorAdapter {
 
         View videoContainer;
         VideoView videoView;
-        View videoButton;
+        ImageView videoButton;
     }
 }

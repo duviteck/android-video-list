@@ -16,6 +16,9 @@ public class SQLiteHelper extends SQLiteOpenHelper {
         public static final String TITLE = "title";
         public static final String TOTAL_SIZE = "total_size";
         public static final String LOADED_SIZE = "loaded_size";
+        public static final String WIDTH = "width";
+        public static final String HEIGHT = "height";
+        public static final String LOADING_STATUS = "loading_status";
         public static final String SHOULD_BE_SHOWN = "should_be_shown";
     }
 
@@ -24,6 +27,9 @@ public class SQLiteHelper extends SQLiteOpenHelper {
             VideoTable.TITLE + " text not null, " +
             VideoTable.TOTAL_SIZE + " integer not null, " +
             VideoTable.LOADED_SIZE + " integer not null, " +
+            VideoTable.WIDTH + " integer not null, " +
+            VideoTable.HEIGHT + " integer not null, " +
+            VideoTable.LOADING_STATUS + " integer not null, " +
             VideoTable.SHOULD_BE_SHOWN + " integer not null, " +
             "UNIQUE (" + VideoTable.URL + ") ON CONFLICT IGNORE" +
             ");";

@@ -84,6 +84,9 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
                 VideoTable.TITLE,
                 VideoTable.TOTAL_SIZE,
                 VideoTable.LOADED_SIZE,
+                VideoTable.WIDTH,
+                VideoTable.HEIGHT,
+                VideoTable.LOADING_STATUS
         });
         cursorLoader.setSelection(VideoTable.SHOULD_BE_SHOWN + " = ?");
         cursorLoader.setSelectionArgs(new String[] {"1"});
