@@ -1,31 +1,56 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/linearLayout1"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:minHeight="100dp">
 
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/loading_container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:singleLine="true" />
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:orientation="vertical"
+        android:layout_gravity="center"
+        android:background="@android:color/darker_gray">
 
-    <TextView
-        android:id="@+id/url"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:singleLine="true" />
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:singleLine="true"
+            android:textStyle="bold"
+            tools:text="Title of the video"/>
 
-    <TextView
-        android:id="@+id/total_size"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:singleLine="true" />
+        <TextView
+            android:id="@+id/progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text="@string/progress_text"
+            tools:text="Loaded 10%"/>
 
-    <TextView
-        android:id="@+id/loaded_size"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:singleLine="true" />
+    </LinearLayout>
 
-</LinearLayout>
+    <RelativeLayout
+        android:id="@+id/video_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.duviteck.tangolistview.VideoView
+            android:id="@+id/video_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <View
+            android:id="@+id/video_button"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@android:color/holo_red_light"
+            android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+</FrameLayout>

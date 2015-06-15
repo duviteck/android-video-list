@@ -3,6 +3,7 @@ package com.duviteck.tangolistview.network;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -143,7 +144,6 @@ public class DataLoaderService extends IntentService {
         try {
             input = new BufferedInputStream(response.body().byteStream());
             output = openFileOutput(URLEncoder.encode(url), MODE_PRIVATE);     // TODO: add comments about CacheDir
-//            output = new FileOutputStream(getPathToVideo(this, url) + LOADING_VIDEO_POSTFIX);
 
             byte buffer[] = new byte[1024];
 
@@ -217,8 +217,8 @@ public class DataLoaderService extends IntentService {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);  // TODO: ordered broadcast?
     }
 
-    public static String getPathToVideo(Context context, String videoName) {
-        return context.getFilesDir() + File.separator + videoName;
+    public static Uri getVideoUri(Context context, String videoUrl) {
+        return Uri.fromFile(new File(context.getFilesDir(), URLEncoder.encode(videoUrl)));
     }
 
     private List<String> getVideoUrls(VideoEntityResponse[] videos) {
