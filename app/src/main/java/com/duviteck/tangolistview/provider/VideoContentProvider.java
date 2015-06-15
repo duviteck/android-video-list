@@ -56,15 +56,7 @@ public class VideoContentProvider extends ContentProvider {
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
-
-        switch (uriMatcher.match(uri)) {
-            case VIDEO_LIST_INDEX:
-                builder.setTables(VideoTable.TABLE_NAME);
-                builder.appendWhere(VideoTable.SHOULD_BE_SHOWN + " = 1");
-                break;
-            default:
-                return null;
-        }
+        builder.setTables(VideoTable.TABLE_NAME);
 
         Cursor cursor = builder.query(database, projection, selection,
                 selectionArgs, null, null, sortOrder);

@@ -90,6 +90,8 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
                 VideoTable.TOTAL_SIZE,
                 VideoTable.LOADED_SIZE,
         });
+        cursorLoader.setSelection(VideoTable.SHOULD_BE_SHOWN + " = ?");
+        cursorLoader.setSelectionArgs(new String[] {"1"});
         return cursorLoader;
     }
 

@@ -11,6 +11,9 @@ import android.widget.TextView;
 import com.duviteck.tangolistview.R;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by duviteck on 15/06/15.
  */
@@ -38,8 +41,30 @@ public class VideoListAdapter extends CursorAdapter {
         ViewHolder holder = (ViewHolder) view.getTag();
         holder.title.setText(cursor.getString(titleIndex));
         holder.url.setText(cursor.getString(urlIndex));
+
+        long totalSize = cursor.getLong(totalSizeIndex);
+        long loadedSize = cursor.getLong(loadedSizeIndex);
         holder.totalSize.setText(cursor.getString(totalSizeIndex));
         holder.loadedSize.setText(cursor.getString(loadedSizeIndex));
+
+        ViewGroup.LayoutParams lp = view.getLayoutParams();
+        if (totalSize == loadedSize) {
+            lp.height = 500 + (int)(totalSize % 300);
+        } else {
+            lp.height = 360;
+        }
+        view.setLayoutParams(lp);
+    }
+
+    public List<String> getVideoUrls() {
+        Cursor c = getCursor();
+        List<String> urls = new ArrayList<>(c.getCount());
+
+        c.moveToPosition(-1);
+        while (c.moveToNext()) {
+            urls.add(c.getString(urlIndex));
+        }
+        return urls;
     }
 
     private void initIndexes(Cursor c) {
