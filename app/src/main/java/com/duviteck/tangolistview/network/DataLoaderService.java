@@ -3,11 +3,11 @@ package com.duviteck.tangolistview.network;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Environment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.duviteck.tangolistview.api.response.VideoEntityResponse;
+import com.duviteck.tangolistview.provider.DatabaseUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
@@ -19,6 +19,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.duviteck.tangolistview.provider.VideoContentProvider.VIDEO_LIST_URI;
 
 /**
  * Created by duviteck on 13/06/15.
@@ -28,12 +32,11 @@ public class DataLoaderService extends IntentService {
     private static final String TAG = SERVICE_NAME;
 
     public static final String LOAD_VIDEO_LIST_ACTION = "loadVideoList";
-    public static final String LOAD_VIDEO_LIST_FAILED_ACTION = "loadVideoListFailed";
     public static final String LOAD_VIDEO_ACTION = "loadVideo";
-    public static final String LOAD_VIDEO_FAILED_ACTION = "loadVideoFailed";
     public static final String LOAD_VIDEO_PROGRESS_ACTION = "loadVideoProgress";
     public static final String CLEAR_UNFINISHED_DOWNLOADS_ACTION = "clearUnfinishedDownloads";
 
+    public static final String SUCCESS_EXTRA = "success";
     public static final String VIDEO_LIST_EXTRA = "extraVideoList";
     public static final String VIDEO_URL_EXTRA = "extraVideoUrl";
     public static final String VIDEO_LOAD_PROGRESS_EXTRA = "extraVideoLoadProgress";
@@ -69,13 +72,27 @@ public class DataLoaderService extends IntentService {
         Log.i(TAG, "handle VideoList action");
 
         VideoEntityResponse[] videos = null;
+        boolean success = false;
         try {
             videos = loadVideoList();
+
+            // insert videos to db
+            DatabaseUtils.insertVideos(this, videos);
+
+            // set SHOW flag for loaded videos
+            List<String> urls = new ArrayList<>(videos.length);
+            for (VideoEntityResponse video : videos) {
+                urls.add(video.getUrl());
+            }
+            DatabaseUtils.setShowFlag(this, urls);
+            getContentResolver().notifyChange(VIDEO_LIST_URI, null);
+
+            success = true;
         } catch (IOException e) {
             Log.w(TAG, "can't load video list");
         }
 
-        notifyAboutVideoListLoad(videos);
+        notifyAboutVideoListLoad(videos, success);
     }
 
     private void handleVideoAction(Intent intent) {
@@ -87,15 +104,15 @@ public class DataLoaderService extends IntentService {
             Log.i(TAG, "handle Video action, [url]:" + videoUrl);
         }
 
-        boolean isSuccessfulLoad = true;
+        boolean success = false;
         try {
             loadVideo(videoUrl);
+            success = true;
         } catch (IOException e) {
             Log.w(TAG, "can't load video [url]:" + videoUrl);
-            isSuccessfulLoad = false;
         }
 
-        notifyLoadFinished(videoUrl, isSuccessfulLoad);
+        notifyLoadFinished(videoUrl, success);
     }
 
     private void handleClearUnfinishedDownloadsAction() {
@@ -161,18 +178,12 @@ public class DataLoaderService extends IntentService {
         }
     }
 
-    private void notifyAboutVideoListLoad(VideoEntityResponse[] videos) {
+    private void notifyAboutVideoListLoad(VideoEntityResponse[] videos, boolean success) {
         // notify about loading video list via LocalBroadcast
-        Intent intent = new Intent();
-        if (videos == null) {
-            // fail
-            intent.setAction(LOAD_VIDEO_LIST_FAILED_ACTION);
-        } else {
-            // success
-            intent.setAction(LOAD_VIDEO_LIST_ACTION);
-            intent.putExtra(VIDEO_LIST_EXTRA, videos);
-        }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        Intent intent = new Intent(LOAD_VIDEO_LIST_ACTION);
+        intent.putExtra(SUCCESS_EXTRA, success);    // helps to differ fail and success
+        intent.putExtra(VIDEO_LIST_EXTRA, videos);
+        sendLocalBroadcast(intent);
     }
 
     private void notifyLoadingProgress(String url, int progress) {
@@ -180,17 +191,29 @@ public class DataLoaderService extends IntentService {
         Intent intent = new Intent(LOAD_VIDEO_PROGRESS_ACTION);
         intent.putExtra(VIDEO_URL_EXTRA, url);
         intent.putExtra(VIDEO_LOAD_PROGRESS_EXTRA, progress);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        sendLocalBroadcast(intent);
     }
 
-    private void notifyLoadFinished(String url, boolean successful) {
+    private void notifyLoadFinished(String url, boolean success) {
         // notify about video loading finish
-        Intent intent = new Intent(successful ? LOAD_VIDEO_ACTION : LOAD_VIDEO_FAILED_ACTION);
+        Intent intent = new Intent(LOAD_VIDEO_ACTION);
+        intent.putExtra(SUCCESS_EXTRA, success);    // helps to differ fail and success
         intent.putExtra(VIDEO_URL_EXTRA, url);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        sendLocalBroadcast(intent);
+    }
+
+    private void sendLocalBroadcast(Intent intent) {
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);  // TODO: ordered broadcast?
     }
 
     public static String getPathToVideo(Context context, String videoName) {
         return context.getFilesDir() + File.separator + videoName;
+    }
+
+
+    public enum LoadingStatus {
+        LOADED,
+        LOADING,
+        NONE
     }
 }

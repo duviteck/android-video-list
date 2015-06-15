@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.duviteck.tangolistview">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -19,6 +21,11 @@
 
         <service
             android:name=".network.DataLoaderService"
+            android:exported="false" />
+
+        <provider
+            android:name=".provider.VideoContentProvider"
+            android:authorities="com.duviteck.tangolistview.provider.VideoContentProvider"
             android:exported="false" />
 
     </application>
