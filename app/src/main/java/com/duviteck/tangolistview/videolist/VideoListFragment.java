@@ -26,7 +26,6 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
     private ListView listView;
     private VideoListAdapter adapter;
 
-    private boolean onSaveInstanceStateCalled = false;
     private boolean isCreatedAfterRotate = false;
 
     public VideoListFragment() {}
@@ -34,8 +33,9 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        isCreatedAfterRotate = onSaveInstanceStateCalled;
-        onSaveInstanceStateCalled = false;
+        // onSaveInstanceState called each time when device is rotated,
+        // so savedInstanceState after rotate is not null
+        isCreatedAfterRotate = (savedInstanceState != null);
     }
 
     @Override
@@ -54,10 +54,6 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         restartLoader();
     }
 
-    private void restartLoader() {
-        getLoaderManager().restartLoader(0, null, this);
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -68,11 +64,10 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         return view;
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        onSaveInstanceStateCalled = true;
-        super.onSaveInstanceState(outState);
+    private void restartLoader() {
+        getLoaderManager().restartLoader(0, null, this);
     }
+
 
     private void requestLoadVideoList() {
         Intent intent = new Intent(getActivity(), DataLoaderService.class);
@@ -97,13 +92,8 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        if (data == null) {
-            Log.w(TAG, "Something go wrong: cursor is null");
-            return;
-        }
-
         if (data.getCount() == 0) {
-            Log.w(TAG, "Something go wrong: empty cursor data");
+//            Log.w(TAG, "Something go wrong: empty cursor data");
             return;
         }
 
@@ -113,7 +103,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         } else {
             adapter.swapCursor(data);
         }
-        Log.i(TAG, "adapter size: " + adapter.getCount());
+//        Log.i(TAG, "adapter size: " + adapter.getCount());
     }
 
     @Override

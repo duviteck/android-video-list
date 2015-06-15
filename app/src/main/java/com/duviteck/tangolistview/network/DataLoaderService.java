@@ -69,6 +69,8 @@ public class DataLoaderService extends IntentService {
     private void handleVideoListAction() {
         Log.i(TAG, "handle VideoList action");
 
+        // TODO: clear all pending intents from working queue (possible only in own Service)
+
         VideoEntityResponse[] videos;
         List<String> videoUrls = null;
         boolean success = false;
