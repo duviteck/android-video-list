@@ -2,8 +2,8 @@ package com.duviteck.tangolistview.videolist;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.media.MediaMetadataRetriever;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.duviteck.tangolistview.R;
@@ -20,11 +21,15 @@ import com.duviteck.tangolistview.network.DataLoaderService;
 import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
+import static com.duviteck.tangolistview.utils.Utils.calcProgress;
+
 /**
  * Created by duviteck on 15/06/15.
  */
 public class VideoListAdapter extends CursorAdapter {
     private static final String TAG = "VideoListAdapter";
+
+    private Context context;
 
     private int titleIndex;
     private int urlIndex;
@@ -34,8 +39,11 @@ public class VideoListAdapter extends CursorAdapter {
     private int heightIndex;
     private int loadingStatusIndex;
 
+    private boolean ignoreNextNotifyDataSetChanged = false;
+
     public VideoListAdapter(Context context, Cursor c) {
         super(context, c, false);
+        this.context = context;
         initIndexes(c);
     }
 
@@ -58,6 +66,8 @@ public class VideoListAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
+        Log.i(TAG, "bindView [position]:" + cursor.getPosition());
+
         if (isVideoContainer(cursor)) {
             bindVideoView(view, context, cursor);
         } else {
@@ -85,10 +95,8 @@ public class VideoListAdapter extends CursorAdapter {
 
         holder.title.setText(cursor.getString(titleIndex));
 
-        long totalSize = cursor.getLong(totalSizeIndex);
-        long loadedSize = cursor.getLong(loadedSizeIndex);
-        int progressPercent = (totalSize == 0) ? 0 : (int)(100 * loadedSize / totalSize);
-        holder.progress.setText(context.getString(R.string.progress_text, progressPercent));
+        int progress = calcProgress(cursor.getLong(loadedSizeIndex), cursor.getLong(totalSizeIndex));
+        holder.progress.setText(context.getString(R.string.progress_text, progress));
     }
 
     private void bindVideoView(final View view, Context context, Cursor cursor) {
@@ -97,8 +105,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.videoContainer.setVisibility(View.VISIBLE);
 
         String url = cursor.getString(urlIndex);
-        Uri videoUri = DataLoaderService.getVideoUri(context, url);
-        holder.videoView.setVideoURI(videoUri);
+        final Uri videoUri = DataLoaderService.getVideoUri(context, url);
 
         final int videoWidth = cursor.getInt(widthIndex);
         final int videoHeight = cursor.getInt(heightIndex);
@@ -128,17 +135,19 @@ public class VideoListAdapter extends CursorAdapter {
             }
         });
 
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        retriever.setDataSource(context, videoUri);
-        Bitmap bitmap = retriever.getFrameAtTime(0);
-        holder.videoButton.setImageBitmap(bitmap);
-        Log.w(TAG, "bitmap width:" + bitmap.getWidth() + ", height:" + bitmap.getHeight());
+//        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//        retriever.setDataSource(context, videoUri);
+//        Bitmap bitmap = retriever.getFrameAtTime(0);
+//        holder.videoButton.setImageBitmap(bitmap);
+        holder.videoButton.setVisibility(View.VISIBLE);
+        holder.videoButton.setImageDrawable(new ColorDrawable(Color.BLUE));
 
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.w(TAG, "onCLick");
                 holder.videoButton.setVisibility(View.GONE);
+                holder.videoView.setVideoURI(videoUri);
                 holder.videoView.start();
             }
         });
@@ -162,6 +171,64 @@ public class VideoListAdapter extends CursorAdapter {
         return holder;
     }
 
+    public void swapCursor(Cursor cursor, ListView listView) {
+        /**
+         * if no one of currently visible items is changed state, we can ignore next
+         * notifyDataSetChanged() and just update loading progress (if needed)
+         *
+         * it helps to play video without jerks during swapCursor
+         */
+        int firstVisiblePos = listView.getFirstVisiblePosition();
+        int lastVisiblePos = listView.getLastVisiblePosition();
+
+        boolean needNotify = false;
+        for (int i = firstVisiblePos; i <= lastVisiblePos; i++) {
+            needNotify |= isLoadingStateChanged(i, getCursor(), cursor);
+        }
+
+        if (!needNotify) {
+            ignoreNextNotifyDataSetChanged = true;
+
+            // since notifyDataSetChanged() won't called, we need to update progress view itself
+            for (int i = firstVisiblePos; i <= lastVisiblePos; i++) {
+                View child = listView.getChildAt(i - firstVisiblePos);
+                updateProgressIfNeeded(child, i, cursor);
+            }
+        }
+
+        super.swapCursor(cursor);
+    }
+
+    private boolean isLoadingStateChanged(int pos, Cursor oldCursor, Cursor newCursor) {
+        oldCursor.moveToPosition(pos);
+        newCursor.moveToPosition(pos);
+
+        // changing state from NOT_LOADING to LOADING is not interesting here,
+        // since both states has same visual type (aka LoadingView)
+        return !isVideoContainer(oldCursor) && isVideoContainer(newCursor);
+    }
+
+    private void updateProgressIfNeeded(View child, int pos, Cursor cursor) {
+        cursor.moveToPosition(pos);
+
+        if (isVideoContainer(cursor)) {
+            return;
+        }
+
+        ViewHolder holder = (ViewHolder) child.getTag();
+        int progress = calcProgress(cursor.getLong(loadedSizeIndex), cursor.getLong(totalSizeIndex));
+        holder.progress.setText(context.getString(R.string.progress_text, progress));
+    }
+
+    @Override
+    public void notifyDataSetChanged() {
+        if (ignoreNextNotifyDataSetChanged) {
+            Log.i(TAG, "notifyDataSetChanged ignored");
+            ignoreNextNotifyDataSetChanged = false;
+        } else {
+            super.notifyDataSetChanged();
+        }
+    }
 
     private static class ViewHolder {
         View loadingContainer;

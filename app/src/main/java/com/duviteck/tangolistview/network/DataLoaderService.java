@@ -27,6 +27,7 @@ import java.util.List;
 import static android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT;
 import static android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH;
 import static com.duviteck.tangolistview.provider.VideoContentProvider.VIDEO_LIST_URI;
+import static com.duviteck.tangolistview.utils.Utils.calcProgress;
 import static java.lang.Integer.parseInt;
 
 /**
@@ -116,12 +117,10 @@ public class DataLoaderService extends IntentService {
         try {
             // mark current video as loading
             DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADING);
-
             loadVideo(videoUrl);
-
             storeVideoSize(videoUrl);
-
             DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADED);
+            notifyUI();
         } catch (IOException e) {
             Log.w(TAG, "can't load video [url]:" + videoUrl);
             // unmark current video as loading
@@ -165,11 +164,11 @@ public class DataLoaderService extends IntentService {
                 output.write(buffer, 0, count);
 
                 loadedSize += count;
-                int newProgress = (int)(loadedSize * 100 / totalSize);
+                int newProgress = calcProgress(loadedSize, totalSize);
                 if (newProgress > oldProgress) {
                     oldProgress = newProgress;
                     DatabaseUtils.updateLoadProgress(this, url, totalSize, loadedSize);
-                    notifyLoadingProgress(url, newProgress);
+                    notifyUI();
                 }
             }
 
@@ -204,9 +203,13 @@ public class DataLoaderService extends IntentService {
         return status != LoadingStatus.NOT_LOADING;
     }
 
+    private void notifyUI() {
+        getContentResolver().notifyChange(VIDEO_LIST_URI, null);
+    }
+
     private void notifyVideoListLoad(boolean success) {
         if (success) {
-            getContentResolver().notifyChange(VIDEO_LIST_URI, null);
+            notifyUI();
         } else {
             // TODO: implement it correctly
             // notify about loading video list via LocalBroadcast
@@ -214,15 +217,6 @@ public class DataLoaderService extends IntentService {
 //            intent.putExtra(SUCCESS_EXTRA, false);
 //            sendLocalBroadcast(intent);
         }
-    }
-
-    private void notifyLoadingProgress(String url, int progress) {
-        getContentResolver().notifyChange(VIDEO_LIST_URI, null);
-//        // notify about loading progress via LocalBroadcast
-//        Intent intent = new Intent(LOAD_VIDEO_PROGRESS_ACTION);
-//        intent.putExtra(VIDEO_URL_EXTRA, url);
-//        intent.putExtra(VIDEO_LOAD_PROGRESS_EXTRA, progress);
-//        sendLocalBroadcast(intent);
     }
 
     private void notifyVideoLoadFailed(String url) {

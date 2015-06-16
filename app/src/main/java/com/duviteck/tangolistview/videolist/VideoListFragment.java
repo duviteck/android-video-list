@@ -96,7 +96,6 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         if (data.getCount() == 0) {
-//            Log.w(TAG, "Something go wrong: empty cursor data");
             return;
         }
 
@@ -104,7 +103,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
             adapter = new VideoListAdapter(getActivity(), data);
             listView.setAdapter(adapter);
         } else {
-            adapter.swapCursor(data);
+            adapter.swapCursor(data, listView);
         }
 //        Log.i(TAG, "adapter size: " + adapter.getCount());
     }
