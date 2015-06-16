@@ -24,6 +24,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
     private static final String TAG = "VideoListFragment";
 
     private ListView listView;
+    private View progressView;
     private VideoListAdapter adapter;
 
     private boolean isCreatedAfterRotate = false;
@@ -44,6 +45,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
 
         if (!isCreatedAfterRotate) {
             Log.i(TAG, "new start");
+            resetState();
             clearShowFlag(getActivity());
             requestLoadVideoList();
         } else {
@@ -60,11 +62,20 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         View view = inflater.inflate(R.layout.fragment_video_list, container, false);
 
         listView = (ListView) view.findViewById(R.id.list_view);
+        progressView = view.findViewById(R.id.loading);
 
         return view;
     }
 
+    private void resetState() {
+        listView.setAdapter(null);
+        adapter = null;
+    }
+
     private void restartLoader() {
+        listView.setVisibility(View.GONE);
+        progressView.setVisibility(View.VISIBLE);
+
         getLoaderManager().restartLoader(0, null, this);
     }
 
@@ -98,6 +109,9 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         if (data.getCount() == 0) {
             return;
         }
+
+        listView.setVisibility(View.VISIBLE);
+        progressView.setVisibility(View.GONE);
 
         if (adapter == null) {
             adapter = new VideoListAdapter(getActivity(), data);

@@ -5,5 +5,4 @@ http://tangohacks.com/video/list.json
 2 * remove short look of previous video on video play start
 * look at jumping items on load finishing (changed vertical size)
 3 * ListView -> RecycleView
-2 * progress circle until video list is loaded
 * remove useless files

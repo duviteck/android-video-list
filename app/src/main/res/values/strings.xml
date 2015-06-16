@@ -3,4 +3,5 @@
 
     <string name="title_activity_main">Tango Video List</string>
     <string name="progress_text">Loaded: %d%%</string>
+    <string name="video_list_loading">Video list loading</string>
 </resources>
