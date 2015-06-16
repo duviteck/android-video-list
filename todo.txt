@@ -3,4 +3,5 @@ http://tangohacks.com/video/list.json
 * make videos loading in several threads
 * make loading progress notifying more seldom
 * look at jumping items on load finishing (changed vertical size)
-* ListView -> RecycleView
+* video stops playing in case of replacing any visible item from "loadingView" to "videoView"
+* ListView -> RecycleView (perhaps, will solve last 2 problems)
