@@ -50,13 +50,27 @@ public class VideoListAdapter extends CursorAdapter {
     private int loadingStatusIndex;
 
     private boolean ignoreNextNotifyDataSetChanged = false;
-//    private ViewHolder playingVideoViewHolder = null;
+    private ViewHolder playingVideoViewHolder = null;
+
+    private int pendingPlayVideoPos;
+    private int pendingPlayVideoSeek;
 
     public VideoListAdapter(Context context, Cursor c) {
         super(context, c, false);
         this.context = context;
         this.videoMaxWidth = context.getResources().getDimensionPixelSize(R.dimen.video_max_width);
         initIndexes(c);
+        clearPendingPlayVideo();
+    }
+
+    public void setPendingPlayVideo(int pos, int seek) {
+        pendingPlayVideoPos = pos;
+        pendingPlayVideoSeek = seek;
+    }
+
+    private void clearPendingPlayVideo() {
+        pendingPlayVideoPos = -1;
+        pendingPlayVideoSeek = -1;
     }
 
     private void initIndexes(Cursor c) {
@@ -78,7 +92,10 @@ public class VideoListAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-//        Log.i(TAG, "bindView [position]:" + cursor.getPosition());
+        final ViewHolder holder = (ViewHolder) view.getTag();
+        if (playingVideoViewHolder == holder) {
+            playingVideoViewHolder.videoView.stopPlayback();
+        }
 
         if (isVideoContainer(cursor)) {
             bindVideoView(view, context, cursor);
@@ -104,7 +121,6 @@ public class VideoListAdapter extends CursorAdapter {
         holder.videoContainerOuter.setVisibility(View.VISIBLE);
 
         final String url = cursor.getString(urlIndex);
-        final Uri videoUri = DataLoaderService.getVideoUri(context, url);
 
         final int videoWidth = cursor.getInt(widthIndex);
         final int videoHeight = cursor.getInt(heightIndex);
@@ -123,6 +139,11 @@ public class VideoListAdapter extends CursorAdapter {
                 playVideo(holder, url, 0);
             }
         });
+
+        if (pendingPlayVideoPos == cursor.getPosition()) {
+            playVideo(holder, url, pendingPlayVideoSeek);
+            clearPendingPlayVideo();
+        }
     }
 
     private void configureVideoContainerSizes(final ViewHolder holder,
@@ -165,15 +186,39 @@ public class VideoListAdapter extends CursorAdapter {
                 holder.videoView.setVisibility(View.VISIBLE);
                 holder.videoView.seekTo(Math.max(0, seekTo - VIDEO_PLAYBACK_DELAY));
                 holder.videoView.start();
+
+                if (playingVideoViewHolder != null) {
+                    playingVideoViewHolder.videoView.stopPlayback();
+                }
+                playingVideoViewHolder = holder;
             }
         });
 
-        holder.videoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+        holder.videoView.setMediaControllListener(new VideoView.MediaControllListener() {
             @Override
-            public void onCompletion(MediaPlayer mp) {
-                Log.w(TAG, "onCompletion");
+            public void onStart() {
+
+            }
+
+            @Override
+            public void onPause() {
+                onComplete();
+            }
+
+            @Override
+            public void onStop() {
+                onComplete();
+            }
+
+            @Override
+            public void onComplete() {
+                Log.w(TAG, "onComplete");
                 holder.videoButton.setVisibility(View.VISIBLE);
                 holder.videoView.setVisibility(View.GONE);
+
+                if (playingVideoViewHolder == holder) {
+                    playingVideoViewHolder = null;
+                }
             }
         });
     }
@@ -208,6 +253,30 @@ public class VideoListAdapter extends CursorAdapter {
         }
 
         super.swapCursor(cursor);
+    }
+
+    public int getPlayingVideoPos(ListView listView) {
+        if (playingVideoViewHolder == null) {
+            return -1;
+        }
+
+        int firstVisiblePos = listView.getFirstVisiblePosition();
+        for (int i = firstVisiblePos; i <= listView.getLastVisiblePosition(); i++) {
+            View v = listView.getChildAt(i - firstVisiblePos);
+            if (v.getTag() == playingVideoViewHolder) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    public int getPlayingVideoSeek() {
+        if (playingVideoViewHolder == null) {
+            return -1;
+        } else {
+            return playingVideoViewHolder.videoView.getCurrentPosition();
+        }
     }
 
     private boolean isLoadingStateChanged(int pos, Cursor oldCursor, Cursor newCursor) {

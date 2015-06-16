@@ -23,11 +23,19 @@ import static com.duviteck.tangolistview.provider.DatabaseUtils.clearShowFlag;
 public class VideoListFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "VideoListFragment";
 
+    private static final String KEY_FIRST_VISIBLE_POS = "firstVisiblePos";
+    private static final String KEY_OFFSET = "offset";
+    private static final String KEY_PLAYING_VIDEO_SEEK = "playingVideoSeek";
+
     private ListView listView;
     private View progressView;
     private VideoListAdapter adapter;
 
     private boolean isCreatedAfterRotate = false;
+
+    private int firstVisiblePos;
+    private int offset;
+    private int playingVideoSeek;
 
     public VideoListFragment() {}
 
@@ -37,6 +45,14 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         // onSaveInstanceState called each time when device is rotated,
         // so savedInstanceState after rotate is not null
         isCreatedAfterRotate = (savedInstanceState != null);
+
+        if (savedInstanceState != null) {
+            firstVisiblePos = savedInstanceState.getInt(KEY_FIRST_VISIBLE_POS, -1);
+            offset = savedInstanceState.getInt(KEY_OFFSET, -1);
+            playingVideoSeek = savedInstanceState.getInt(KEY_PLAYING_VIDEO_SEEK, -1);
+        } else {
+            resetStoredAdapterPosition();
+        }
     }
 
     @Override
@@ -65,6 +81,42 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         progressView = view.findViewById(R.id.loading);
 
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        calcAdapterPositionForRestore();
+        super.onDestroyView();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        calcAdapterPositionForRestore();
+        outState.putInt(KEY_FIRST_VISIBLE_POS, firstVisiblePos);
+        outState.putInt(KEY_OFFSET, offset);
+        outState.putInt(KEY_PLAYING_VIDEO_SEEK, playingVideoSeek);
+    }
+
+    private void calcAdapterPositionForRestore() {
+        if (listView != null && adapter != null && adapter.getCount() > 0) {
+            int playingVideoPos = adapter.getPlayingVideoPos(listView);
+            if (playingVideoPos >= 0) {
+                // (after rotate) in case of playing video we prefer to show playing video
+                firstVisiblePos = playingVideoPos;
+                offset = 0;
+            } else {
+                firstVisiblePos = listView.getFirstVisiblePosition();
+                offset = listView.getChildAt(0).getTop();
+            }
+            playingVideoSeek = adapter.getPlayingVideoSeek();
+        }
+    }
+
+    private void resetStoredAdapterPosition() {
+        firstVisiblePos = -1;
+        offset = -1;
+        playingVideoSeek = -1;
     }
 
     private void resetState() {
@@ -100,7 +152,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
                 VideoTable.LOADING_STATUS
         });
         cursorLoader.setSelection(VideoTable.SHOULD_BE_SHOWN + " = ?");
-        cursorLoader.setSelectionArgs(new String[] {"1"});
+        cursorLoader.setSelectionArgs(new String[]{"1"});
         return cursorLoader;
     }
 
@@ -116,10 +168,17 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         if (adapter == null) {
             adapter = new VideoListAdapter(getActivity(), data);
             listView.setAdapter(adapter);
+
+            if (firstVisiblePos >= 0) {
+                listView.setSelectionFromTop(firstVisiblePos, offset);
+                if (playingVideoSeek >= 0) {
+                    adapter.setPendingPlayVideo(firstVisiblePos, playingVideoSeek);
+                }
+                resetStoredAdapterPosition();
+            }
         } else {
             adapter.swapCursor(data, listView);
         }
-//        Log.i(TAG, "adapter size: " + adapter.getCount());
     }
 
     @Override
