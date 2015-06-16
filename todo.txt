@@ -1,5 +1,6 @@
 http://tangohacks.com/video/list.json
 
 * make videos loading in several threads
+* make loading progress notifying more seldom
 * look at jumping items on load finishing (changed vertical size)
 * ListView -> RecycleView

@@ -60,7 +60,7 @@ public class VideoContentProvider extends ContentProvider {
 
         Cursor cursor = builder.query(database, projection, selection,
                 selectionArgs, null, null, sortOrder);
-        cursor.setNotificationUri(getContext().getContentResolver(), uri);  // TODO: is it needed?
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
         return cursor;
     }
 

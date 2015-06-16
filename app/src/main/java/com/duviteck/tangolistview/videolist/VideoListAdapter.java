@@ -135,7 +135,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.w(TAG, "onCLick");
+                Log.i(TAG, "onCLick");
                 playVideo(holder, url, 0);
             }
         });
@@ -176,7 +176,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
-                Log.w(TAG, "onPrepared");
+                Log.i(TAG, "onPrepared");
                 holder.videoButton.postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -212,7 +212,7 @@ public class VideoListAdapter extends CursorAdapter {
 
             @Override
             public void onComplete() {
-                Log.w(TAG, "onComplete");
+                Log.i(TAG, "onComplete");
                 holder.videoButton.setVisibility(View.VISIBLE);
                 holder.videoView.setVisibility(View.GONE);
 
