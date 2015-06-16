@@ -2,8 +2,7 @@ package com.duviteck.tangolistview.videolist;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -21,6 +20,7 @@ import com.duviteck.tangolistview.network.DataLoaderService;
 import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
+import static com.duviteck.tangolistview.network.DataLoaderService.getVideoFirstFramePath;
 import static com.duviteck.tangolistview.utils.Utils.calcProgress;
 
 /**
@@ -135,12 +135,8 @@ public class VideoListAdapter extends CursorAdapter {
             }
         });
 
-//        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-//        retriever.setDataSource(context, videoUri);
-//        Bitmap bitmap = retriever.getFrameAtTime(0);
-//        holder.videoButton.setImageBitmap(bitmap);
         holder.videoButton.setVisibility(View.VISIBLE);
-        holder.videoButton.setImageDrawable(new ColorDrawable(Color.BLUE));
+        holder.videoButton.setImageBitmap(BitmapFactory.decodeFile(getVideoFirstFramePath(context, url)));
 
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
             @Override

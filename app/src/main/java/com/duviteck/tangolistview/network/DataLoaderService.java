@@ -3,6 +3,7 @@ package com.duviteck.tangolistview.network;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.support.v4.content.LocalBroadcastManager;
@@ -17,6 +18,8 @@ import com.squareup.okhttp.Response;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -119,6 +122,7 @@ public class DataLoaderService extends IntentService {
             DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADING);
             loadVideo(videoUrl);
             storeVideoSize(videoUrl);
+            storeVideoFirstFrame(videoUrl);
             DatabaseUtils.updateLoadingStatus(this, videoUrl, LoadingStatus.LOADED);
             notifyUI();
         } catch (IOException e) {
@@ -151,7 +155,7 @@ public class DataLoaderService extends IntentService {
         OutputStream output = null;
         try {
             input = new BufferedInputStream(response.body().byteStream());
-            output = openFileOutput(URLEncoder.encode(url), MODE_PRIVATE);     // TODO: add comments about CacheDir
+            output = openFileOutput(getVideoName(url), MODE_PRIVATE);     // TODO: add comments about CacheDir
 
             byte buffer[] = new byte[1024];
 
@@ -195,6 +199,31 @@ public class DataLoaderService extends IntentService {
         DatabaseUtils.updateVideoSize(this, url, width, height);
     }
 
+    private void storeVideoFirstFrame(String url) throws FileNotFoundException {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        Uri videoUri = getVideoUri(this, url);
+
+        retriever.setDataSource(this, videoUri);
+        Bitmap bitmap = retriever.getFrameAtTime(0);
+
+        FileOutputStream outputStream = null;
+        try {
+            outputStream = openFileOutput(getVideoFirstFrameName(url), MODE_PRIVATE);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+        } finally {
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        bitmap.recycle();
+        retriever.release();
+    }
+
     private boolean isVideoAlreadyLoading(String videoUrl) {
         LoadingStatus status = DatabaseUtils.getVideoLoadingStatus(this, videoUrl);
         if (status == null) {
@@ -233,7 +262,19 @@ public class DataLoaderService extends IntentService {
     }
 
     public static Uri getVideoUri(Context context, String videoUrl) {
-        return Uri.fromFile(new File(context.getFilesDir(), URLEncoder.encode(videoUrl)));
+        return Uri.fromFile(new File(context.getFilesDir(), getVideoName(videoUrl)));
+    }
+
+    public static String getVideoFirstFramePath(Context context, String videoUrl) {
+        return new File(context.getFilesDir(), getVideoFirstFrameName(videoUrl)).getAbsolutePath();
+    }
+
+    private static String getVideoName(String videoUrl) {
+        return URLEncoder.encode(videoUrl);
+    }
+
+    private static String getVideoFirstFrameName(String videoUrl) {
+        return getVideoName(videoUrl) + "-image";
     }
 
     private List<String> getVideoUrls(VideoEntityResponse[] videos) {

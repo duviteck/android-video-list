@@ -1,9 +1,11 @@
 http://tangohacks.com/video/list.json
 
-* make videos loading in several threads
-* list view lost position on screen rotate
-* prepare and store first video frame in local file
-* load first frames via Glide
-* remove short look of previous video on video play start
+3 * make videos loading in several threads
+2? * list view lost position on screen rotate
+1 * load first frames via Glide
+1 * configure size of item views
+2 * remove short look of previous video on video play start
 * look at jumping items on load finishing (changed vertical size)
-* ListView -> RecycleView
+3 * ListView -> RecycleView
+2 * progress circle until video list is loaded
+* remove useless files
