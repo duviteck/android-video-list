@@ -32,6 +32,7 @@ public class VideoListAdapter extends CursorAdapter {
     private static final String TAG = "VideoListAdapter";
 
     private Context context;
+    private int videoMaxWidth;
 
     private int titleIndex;
     private int urlIndex;
@@ -46,6 +47,7 @@ public class VideoListAdapter extends CursorAdapter {
     public VideoListAdapter(Context context, Cursor c) {
         super(context, c, false);
         this.context = context;
+        this.videoMaxWidth = context.getResources().getDimensionPixelSize(R.dimen.video_max_width);
         initIndexes(c);
     }
 
@@ -93,7 +95,7 @@ public class VideoListAdapter extends CursorAdapter {
     private void bindLoadingView(View view, Context context, Cursor cursor) {
         ViewHolder holder = (ViewHolder) view.getTag();
         holder.loadingContainer.setVisibility(View.VISIBLE);
-        holder.videoContainer.setVisibility(View.GONE);
+        holder.videoContainerOuter.setVisibility(View.GONE);
 
         holder.title.setText(cursor.getString(titleIndex));
 
@@ -104,38 +106,14 @@ public class VideoListAdapter extends CursorAdapter {
     private void bindVideoView(final View view, Context context, Cursor cursor) {
         final ViewHolder holder = (ViewHolder) view.getTag();
         holder.loadingContainer.setVisibility(View.GONE);
-        holder.videoContainer.setVisibility(View.VISIBLE);
+        holder.videoContainerOuter.setVisibility(View.VISIBLE);
 
         String url = cursor.getString(urlIndex);
         final Uri videoUri = DataLoaderService.getVideoUri(context, url);
 
         final int videoWidth = cursor.getInt(widthIndex);
         final int videoHeight = cursor.getInt(heightIndex);
-        view.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-            @Override
-            public boolean onPreDraw() {
-                ViewGroup.LayoutParams lp = view.getLayoutParams();
-                int width = view.getWidth() != 0 ? view.getWidth() : lp.width;
-                int height = videoHeight * width / videoWidth;
-
-                lp.width = width;
-                lp.height = height;
-                view.setLayoutParams(lp);
-
-                lp = holder.videoView.getLayoutParams();
-                lp.width = width;
-                lp.height = height;
-                holder.videoView.setLayoutParams(lp);
-
-                lp = holder.videoButton.getLayoutParams();
-                lp.width = width;
-                lp.height = height;
-                holder.videoButton.setLayoutParams(lp);
-
-                view.getViewTreeObserver().removeOnPreDrawListener(this);
-                return true;
-            }
-        });
+        configureVideoContainerSizes(holder, videoWidth, videoHeight);
 
         holder.videoButton.setVisibility(View.VISIBLE);
         Glide.with(context)
@@ -154,6 +132,30 @@ public class VideoListAdapter extends CursorAdapter {
         });
     }
 
+    private void configureVideoContainerSizes(final ViewHolder holder,
+                                              final int videoWidth, final int videoHeight) {
+        holder.videoContainer.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                // calc target size
+                int currentWidth = holder.videoContainer.getWidth() != 0
+                        ? holder.videoContainer.getWidth()
+                        : holder.videoContainer.getLayoutParams().width;
+                int targetWidth = Math.min(videoMaxWidth, currentWidth);
+                int targetHeight = videoHeight * targetWidth / videoWidth;
+                Log.w(TAG, "target width:" + targetWidth + ", height:" + targetHeight);
+
+                ViewGroup.LayoutParams lp = holder.videoContainer.getLayoutParams();
+                lp.width = targetWidth;
+                lp.height = targetHeight;
+                holder.videoContainer.setLayoutParams(lp);
+
+                holder.videoContainer.getViewTreeObserver().removeOnPreDrawListener(this);
+                return true;
+            }
+        });
+    }
+
     private boolean isVideoContainer(Cursor cursor) {
         return LoadingStatus.fromValue(cursor.getInt(loadingStatusIndex)) == LoadingStatus.LOADED;
     }
@@ -165,6 +167,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.title = (TextView) view.findViewById(R.id.title);
         holder.progress = (TextView) view.findViewById(R.id.progress);
 
+        holder.videoContainerOuter = view.findViewById(R.id.video_container_outer);
         holder.videoContainer = view.findViewById(R.id.video_container);
         holder.videoView = (VideoView) view.findViewById(R.id.video_view);
         holder.videoButton = (ImageView) view.findViewById(R.id.video_button);
@@ -236,6 +239,7 @@ public class VideoListAdapter extends CursorAdapter {
         TextView title;
         TextView progress;
 
+        View videoContainerOuter;
         View videoContainer;
         VideoView videoView;
         ImageView videoButton;
