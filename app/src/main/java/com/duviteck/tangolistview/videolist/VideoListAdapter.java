@@ -2,7 +2,6 @@ package com.duviteck.tangolistview.videolist;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,11 +13,14 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.duviteck.tangolistview.R;
 import com.duviteck.tangolistview.VideoView;
 import com.duviteck.tangolistview.network.DataLoaderService;
 import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
+
+import java.io.File;
 
 import static com.duviteck.tangolistview.network.DataLoaderService.getVideoFirstFramePath;
 import static com.duviteck.tangolistview.utils.Utils.calcProgress;
@@ -131,12 +133,15 @@ public class VideoListAdapter extends CursorAdapter {
                 holder.videoButton.setLayoutParams(lp);
 
                 view.getViewTreeObserver().removeOnPreDrawListener(this);
-                return false;
+                return true;
             }
         });
 
         holder.videoButton.setVisibility(View.VISIBLE);
-        holder.videoButton.setImageBitmap(BitmapFactory.decodeFile(getVideoFirstFramePath(context, url)));
+        Glide.with(context)
+                .load(new File(getVideoFirstFramePath(context, url)))
+                .placeholder(R.drawable.video_placeholder)
+                .into(holder.videoButton);
 
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
             @Override
