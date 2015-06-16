@@ -2,6 +2,7 @@ package com.duviteck.tangolistview.videolist;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -31,6 +32,12 @@ import static com.duviteck.tangolistview.utils.Utils.calcProgress;
 public class VideoListAdapter extends CursorAdapter {
     private static final String TAG = "VideoListAdapter";
 
+    /**
+     * Using a short delay on video playback helps to remove a "last frame" blink
+     * on starting playing a new video.
+     */
+    private static final int VIDEO_PLAYBACK_DELAY = 300;
+
     private Context context;
     private int videoMaxWidth;
 
@@ -43,6 +50,7 @@ public class VideoListAdapter extends CursorAdapter {
     private int loadingStatusIndex;
 
     private boolean ignoreNextNotifyDataSetChanged = false;
+//    private ViewHolder playingVideoViewHolder = null;
 
     public VideoListAdapter(Context context, Cursor c) {
         super(context, c, false);
@@ -70,25 +78,12 @@ public class VideoListAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        Log.i(TAG, "bindView [position]:" + cursor.getPosition());
+//        Log.i(TAG, "bindView [position]:" + cursor.getPosition());
 
         if (isVideoContainer(cursor)) {
             bindVideoView(view, context, cursor);
         } else {
             bindLoadingView(view, context, cursor);
-        }
-    }
-
-    public boolean isVideoContainer(int position) {
-        Cursor c = getCursor();
-        c.moveToPosition(position);
-        return isVideoContainer(c);
-    }
-
-    public void playVideoIfLoaded(View view) {
-        ViewHolder holder = (ViewHolder) view.getTag();
-        if (holder.videoView.getVisibility() == View.VISIBLE) {
-            holder.videoView.start();
         }
     }
 
@@ -108,7 +103,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.loadingContainer.setVisibility(View.GONE);
         holder.videoContainerOuter.setVisibility(View.VISIBLE);
 
-        String url = cursor.getString(urlIndex);
+        final String url = cursor.getString(urlIndex);
         final Uri videoUri = DataLoaderService.getVideoUri(context, url);
 
         final int videoWidth = cursor.getInt(widthIndex);
@@ -125,9 +120,7 @@ public class VideoListAdapter extends CursorAdapter {
             @Override
             public void onClick(View v) {
                 Log.w(TAG, "onCLick");
-                holder.videoButton.setVisibility(View.GONE);
-                holder.videoView.setVideoURI(videoUri);
-                holder.videoView.start();
+                playVideo(holder, url, 0);
             }
         });
     }
@@ -143,7 +136,6 @@ public class VideoListAdapter extends CursorAdapter {
                         : holder.videoContainer.getLayoutParams().width;
                 int targetWidth = Math.min(videoMaxWidth, currentWidth);
                 int targetHeight = videoHeight * targetWidth / videoWidth;
-                Log.w(TAG, "target width:" + targetWidth + ", height:" + targetHeight);
 
                 ViewGroup.LayoutParams lp = holder.videoContainer.getLayoutParams();
                 lp.width = targetWidth;
@@ -156,23 +148,38 @@ public class VideoListAdapter extends CursorAdapter {
         });
     }
 
-    private boolean isVideoContainer(Cursor cursor) {
-        return LoadingStatus.fromValue(cursor.getInt(loadingStatusIndex)) == LoadingStatus.LOADED;
+    private void playVideo(final ViewHolder holder, String url, final int seekTo) {
+        final Uri videoUri = DataLoaderService.getVideoUri(context, url);
+        holder.videoView.setVideoURI(videoUri);
+
+        holder.videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                Log.w(TAG, "onPrepared");
+                holder.videoButton.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        holder.videoButton.setVisibility(View.GONE);
+                    }
+                }, VIDEO_PLAYBACK_DELAY);
+                holder.videoView.setVisibility(View.VISIBLE);
+                holder.videoView.seekTo(Math.max(0, seekTo - VIDEO_PLAYBACK_DELAY));
+                holder.videoView.start();
+            }
+        });
+
+        holder.videoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                Log.w(TAG, "onCompletion");
+                holder.videoButton.setVisibility(View.VISIBLE);
+                holder.videoView.setVisibility(View.GONE);
+            }
+        });
     }
 
-    private ViewHolder createHolder(View view) {
-        ViewHolder holder = new ViewHolder();
-
-        holder.loadingContainer = view.findViewById(R.id.loading_container);
-        holder.title = (TextView) view.findViewById(R.id.title);
-        holder.progress = (TextView) view.findViewById(R.id.progress);
-
-        holder.videoContainerOuter = view.findViewById(R.id.video_container_outer);
-        holder.videoContainer = view.findViewById(R.id.video_container);
-        holder.videoView = (VideoView) view.findViewById(R.id.video_view);
-        holder.videoButton = (ImageView) view.findViewById(R.id.video_button);
-
-        return holder;
+    private boolean isVideoContainer(Cursor cursor) {
+        return LoadingStatus.fromValue(cursor.getInt(loadingStatusIndex)) == LoadingStatus.LOADED;
     }
 
     public void swapCursor(Cursor cursor, ListView listView) {
@@ -233,6 +240,22 @@ public class VideoListAdapter extends CursorAdapter {
             super.notifyDataSetChanged();
         }
     }
+
+    private ViewHolder createHolder(View view) {
+        ViewHolder holder = new ViewHolder();
+
+        holder.loadingContainer = view.findViewById(R.id.loading_container);
+        holder.title = (TextView) view.findViewById(R.id.title);
+        holder.progress = (TextView) view.findViewById(R.id.progress);
+
+        holder.videoContainerOuter = view.findViewById(R.id.video_container_outer);
+        holder.videoContainer = view.findViewById(R.id.video_container);
+        holder.videoView = (VideoView) view.findViewById(R.id.video_view);
+        holder.videoButton = (ImageView) view.findViewById(R.id.video_button);
+
+        return holder;
+    }
+
 
     private static class ViewHolder {
         View loadingContainer;
