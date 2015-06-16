@@ -1,6 +1,5 @@
 http://tangohacks.com/video/list.json
 
-* remove settings button handling in case of non-usage
 * make videos loading in several threads
 * list view lost position on screen rotate
 * prepare and store first video frame in local file
