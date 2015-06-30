@@ -65,6 +65,7 @@ public class DatabaseUtils {
             ops.add(ContentProviderOperation.newInsert(INSERT_VIDEO_URI)
                     .withValue(VideoTable.URL, video.getUrl())
                     .withValue(VideoTable.TITLE, video.getTitle())
+                    .withValue(VideoTable.THUMB, video.getThumb())
                     .withValue(VideoTable.TOTAL_SIZE, 0)
                     .withValue(VideoTable.LOADED_SIZE, 0)
                     .withValue(VideoTable.WIDTH, 0)

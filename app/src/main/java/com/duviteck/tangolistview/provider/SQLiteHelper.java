@@ -14,6 +14,7 @@ public class SQLiteHelper extends SQLiteOpenHelper {
         // because URL works like primary key, and CursorAdapter needs a column with name "_id"
         public static final String URL = "_id";
         public static final String TITLE = "title";
+        public static final String THUMB = "thumb";
         public static final String TOTAL_SIZE = "total_size";
         public static final String LOADED_SIZE = "loaded_size";
         public static final String WIDTH = "width";
@@ -25,6 +26,7 @@ public class SQLiteHelper extends SQLiteOpenHelper {
     private static final String DATABASE_CREATE_VIDEO_TABLE = "create table " + VideoTable.TABLE_NAME + "(" +
             VideoTable.URL + " text primary key, " +
             VideoTable.TITLE + " text not null, " +
+            VideoTable.THUMB + " text not null, " +
             VideoTable.TOTAL_SIZE + " integer not null, " +
             VideoTable.LOADED_SIZE + " integer not null, " +
             VideoTable.WIDTH + " integer not null, " +

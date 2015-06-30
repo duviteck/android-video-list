@@ -145,6 +145,7 @@ public class VideoListFragment extends Fragment implements LoaderManager.LoaderC
         cursorLoader.setProjection(new String[]{
                 VideoTable.URL,
                 VideoTable.TITLE,
+                VideoTable.THUMB,
                 VideoTable.TOTAL_SIZE,
                 VideoTable.LOADED_SIZE,
                 VideoTable.WIDTH,

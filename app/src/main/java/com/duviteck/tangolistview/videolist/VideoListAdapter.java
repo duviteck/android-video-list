@@ -12,6 +12,7 @@ import android.view.ViewTreeObserver;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
@@ -21,9 +22,6 @@ import com.duviteck.tangolistview.network.DataLoaderService;
 import com.duviteck.tangolistview.network.DataLoaderService.LoadingStatus;
 import com.duviteck.tangolistview.provider.SQLiteHelper.VideoTable;
 
-import java.io.File;
-
-import static com.duviteck.tangolistview.network.DataLoaderService.getVideoFirstFramePath;
 import static com.duviteck.tangolistview.utils.Utils.calcProgress;
 
 /**
@@ -43,6 +41,7 @@ public class VideoListAdapter extends CursorAdapter {
 
     private int titleIndex;
     private int urlIndex;
+    private int thumbIndex;
     private int totalSizeIndex;
     private int loadedSizeIndex;
     private int widthIndex;
@@ -76,6 +75,7 @@ public class VideoListAdapter extends CursorAdapter {
     private void initIndexes(Cursor c) {
         titleIndex = c.getColumnIndexOrThrow(VideoTable.TITLE);
         urlIndex = c.getColumnIndexOrThrow(VideoTable.URL);
+        thumbIndex = c.getColumnIndexOrThrow(VideoTable.THUMB);
         totalSizeIndex = c.getColumnIndexOrThrow(VideoTable.TOTAL_SIZE);
         loadedSizeIndex = c.getColumnIndexOrThrow(VideoTable.LOADED_SIZE);
         widthIndex = c.getColumnIndexOrThrow(VideoTable.WIDTH);
@@ -113,6 +113,13 @@ public class VideoListAdapter extends CursorAdapter {
 
         int progress = calcProgress(cursor.getLong(loadedSizeIndex), cursor.getLong(totalSizeIndex));
         holder.progress.setText(context.getString(R.string.progress_text, progress));
+        holder.progress2.setProgress(progress);
+
+        final String thumb = cursor.getString(thumbIndex);
+        Glide.with(context)
+                .load(thumb)
+                .placeholder(R.drawable.video_placeholder)
+                .into(holder.thumb);
     }
 
     private void bindVideoView(final View view, Context context, Cursor cursor) {
@@ -121,6 +128,7 @@ public class VideoListAdapter extends CursorAdapter {
         holder.videoContainerOuter.setVisibility(View.VISIBLE);
 
         final String url = cursor.getString(urlIndex);
+        final String thumb = cursor.getString(thumbIndex);
 
         final int videoWidth = cursor.getInt(widthIndex);
         final int videoHeight = cursor.getInt(heightIndex);
@@ -128,8 +136,9 @@ public class VideoListAdapter extends CursorAdapter {
 
         holder.videoButton.setVisibility(View.VISIBLE);
         Glide.with(context)
-                .load(new File(getVideoFirstFramePath(context, url)))
+                .load(thumb)
                 .placeholder(R.drawable.video_placeholder)
+                .dontTransform()
                 .into(holder.videoButton);
 
         holder.videoButton.setOnClickListener(new View.OnClickListener() {
@@ -298,6 +307,7 @@ public class VideoListAdapter extends CursorAdapter {
         ViewHolder holder = (ViewHolder) child.getTag();
         int progress = calcProgress(cursor.getLong(loadedSizeIndex), cursor.getLong(totalSizeIndex));
         holder.progress.setText(context.getString(R.string.progress_text, progress));
+        holder.progress2.setProgress(progress);
     }
 
     @Override
@@ -316,6 +326,8 @@ public class VideoListAdapter extends CursorAdapter {
         holder.loadingContainer = view.findViewById(R.id.loading_container);
         holder.title = (TextView) view.findViewById(R.id.title);
         holder.progress = (TextView) view.findViewById(R.id.progress);
+        holder.progress2 = (ProgressBar) view.findViewById(R.id.progress2);
+        holder.thumb = (ImageView) view.findViewById(R.id.thumb);
 
         holder.videoContainerOuter = view.findViewById(R.id.video_container_outer);
         holder.videoContainer = view.findViewById(R.id.video_container);
@@ -330,6 +342,8 @@ public class VideoListAdapter extends CursorAdapter {
         View loadingContainer;
         TextView title;
         TextView progress;
+        ProgressBar progress2;
+        ImageView thumb;
 
         View videoContainerOuter;
         View videoContainer;

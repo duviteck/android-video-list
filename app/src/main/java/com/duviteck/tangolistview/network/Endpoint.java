@@ -6,6 +6,6 @@ package com.duviteck.tangolistview.network;
 public class Endpoint {
 
     public static String getVideoListUrl() {
-        return "http://tangohacks.com/video/list.json";
+        return "http://tangohacks.com/video/videolist.json";
     }
 }

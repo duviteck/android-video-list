@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import com.duviteck.tangolistview.api.response.VideoEntityResponse;
+import com.duviteck.tangolistview.api.response.VideoListResponse;
 import com.duviteck.tangolistview.provider.DatabaseUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.squareup.okhttp.OkHttpClient;
@@ -140,7 +141,8 @@ public class DataLoaderService extends IntentService {
 
         Request request = new Request.Builder().url(url).build();
         Response response = client.newCall(request).execute();
-        return new ObjectMapper().readValue(response.body().bytes(), VideoEntityResponse[].class);
+        VideoListResponse videoListResponse = new ObjectMapper().readValue(response.body().bytes(), VideoListResponse.class);
+        return videoListResponse.getVideoList();
     }
 
     private void loadVideo(String url) throws IOException {
